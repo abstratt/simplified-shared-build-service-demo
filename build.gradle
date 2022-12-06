@@ -1,0 +1,191 @@
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
+import org.gradle.api.services.ServiceReference
+
+def serviceProvider = gradle.sharedServices.registerIfAbsent("countingService", CountingService) {
+    parameters.initial = 42
+}
+
+// Task with shared build service reference marked as @Internal
+// (requires explicit setting and usage declaration)
+abstract class Counter0 extends DefaultTask {
+    @Internal
+    abstract Property<CountingService> getCounter()
+
+    @TaskAction
+    def go() {
+        counter.get().increment()
+    }
+}
+
+// Task with (unused) shared build service reference marked as @Internal
+abstract class Counter1 extends DefaultTask {
+    @Internal
+    abstract Property<CountingService> getCounter()
+
+    @TaskAction
+    def go() {
+        println("...")
+    }
+}
+
+// Task with shared build service reference marked with unnamed @ServiceReference
+abstract class Counter2 extends DefaultTask {
+    @ServiceReference
+    abstract Property<CountingService> getCounter()
+
+    @TaskAction
+    def go() {
+        counter.get().increment()
+    }
+}
+
+// Task with shared build service reference marked with named @ServiceReference
+abstract class Counter3 extends DefaultTask {
+    @ServiceReference("countingService")
+    abstract Property<CountingService> getCounter()
+
+    @TaskAction
+    def go() {
+        counter.get().increment()
+    }
+}
+
+// Task with shared build service reference marked with named @ServiceReference
+abstract class Counter4 extends DefaultTask {
+    @ServiceReference("countingService")
+    abstract Property<CountingService> getCounter()
+
+    @TaskAction
+    def go() {
+        println("...")
+    }
+}
+
+// fails to declare service usage (gets warning)
+tasks.register("counter0", Counter0) {
+    it.counter = serviceProvider
+    doFirst {
+        assert requiredServices.elements.size() == 0
+        serviceProvider.get().increment()
+    }
+}
+
+// declares usage using Task#usesService
+tasks.register("counter1a", Counter1) {
+    it.counter = serviceProvider
+    it.usesService(serviceProvider)
+    doFirst {
+        assert requiredServices.elements.size() == 1
+        counter.get().increment()
+    }
+}
+
+// declares usage using Task#usesService
+tasks.register("counter1b", Counter1) {
+    it.counter = serviceProvider
+    it.usesService(serviceProvider)
+    doFirst {
+        assert requiredServices.elements.size() == 1
+        serviceProvider.get().increment()
+    }
+}
+
+// declares usage using Task#usesService
+tasks.register("counter1c", Counter1) {
+    it.usesService(serviceProvider)
+    doFirst {
+        assert requiredServices.elements.size() == 1
+        serviceProvider.get().increment()
+    }
+}
+
+// declares usage using Task#usesService but does not use service
+tasks.register("counter1d", Counter1) {
+    it.counter = serviceProvider
+    it.usesService(serviceProvider)
+    doFirst {
+        assert requiredServices.elements.size() == 1
+        println("Not actually using service")
+    }
+}
+
+// declares usage using @ServiceReference (without a service name) and assigns service provider explicitly
+tasks.register("counter2a", Counter2) {
+    it.counter = serviceProvider
+    doFirst {
+        assert requiredServices.elements.size() == 1
+        counter.get().increment()
+    }
+}
+
+// declares usage using @ServiceReference (without a service name) and assigns service provider explicitly
+tasks.register("counter2b", Counter2) {
+    it.counter = serviceProvider
+    doFirst {
+        assert requiredServices.elements.size() == 1
+        serviceProvider.get().increment()
+    }
+}
+
+// declares usage using @ServiceReference (with a service name)
+tasks.register("counter3a", Counter3) {
+    doFirst {
+        assert requiredServices.elements.size() == 1
+        counter.get().increment()
+    }
+}
+
+// declares usage using @ServiceReference (with a service name)
+tasks.register("counter3b", Counter3) {
+    doFirst {
+        assert requiredServices.elements.size() == 1
+        serviceProvider.get().increment()
+    }
+}
+
+// declares usage using @ServiceReference (with a service name)
+tasks.register("counter3c", Counter3) {
+    doFirst {
+        assert requiredServices.elements.size() == 1
+    }
+}
+
+// declares usage using @ServiceReference (with a service name) but does not actually use service
+tasks.register("counter4", Counter4) {
+    doFirst {
+        assert requiredServices.elements.size() == 1
+        println("Not actually using service")
+    }
+}
+
+interface CountingParams extends BuildServiceParameters {
+    Property<Integer> getInitial()
+}
+
+abstract class CountingService implements BuildService<CountingParams>, AutoCloseable {
+    int value
+
+    CountingService() {
+        value = parameters.initial.get()
+        println("service: created with value = ${value}")
+    }
+
+    synchronized int getInitialValue() { return parameters.initial.get() }
+
+    synchronized void reset() {
+        value = parameters.initial.get()
+        println("service: value is ${value}")
+    }
+
+    synchronized int increment() {
+        value++
+        println("service: value is ${value}")
+        return value
+    }
+
+    @Override
+    void close() {
+        println("service: closed with value ${value}")
+    }
+}
