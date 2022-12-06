@@ -42,7 +42,7 @@ task consumerTask(type: Consumer){
 
 ## Proposed programming model
 
-For Gradle 8+ (release to be confirmed), we intend to release a new model for consuming shared build services (issue). In this new model, all that is required is:
+For Gradle 8+ (release to be confirmed), we intend to release a new model for consuming shared build services. In this new model, all that is required is:
 
 1. declaring a property typed using the service type
 2. marking with `@ServiceReference("nameOfService")`
