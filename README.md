@@ -9,11 +9,11 @@ This repository includes a simple project to illustrate the feature.
 Up to Gradle 7.6, the consumption of shared build services required:
 
 1. declaring a property typed using the service type
-2. marking it as `@Internal``
+2. marking it as `@Internal`
 3. explicitly declaring the task uses said service
 4. explicitly setting the property value or convention with the reference to the service (as returned by service registration)
 
-```
+```groovy
 Provider<CountingService> serviceProvider = gradle.sharedServices.registerIfAbsent("counter", 
 CountingService) {
     // ... 
@@ -47,7 +47,7 @@ For Gradle 8+ (release to be confirmed), we intend to release a new model for co
 1. declaring a property typed using the service type
 2. marking with `@ServiceReference("nameOfService")`
 
-```
+```groovy
 // no need to keep the service reference around
 gradle.sharedServices.registerIfAbsent("counter", 
     CountingService) {
