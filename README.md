@@ -76,16 +76,42 @@ task consumerTask(type: Consumer) {
 ### Comparing both models
 
 1. in the new model, there is no need to store and refer to the provider returned by service registration.
-1. in the new model, the consumer needs to now the name the service was published under
+1. in the new model, the consumer needs to know the name the service was published under
 1. in the new model, properties declared as service references may be declared as `@Optional`. If optional, an unresolved service reference will not lead to a validation error, but code needs to be written so it can handle a missing service (e.g. `if (counter.isPresent()) { ... }`).
 
 ### Service references without a name
 
-A variation of the new model that we also support allows applying the `@ServiceReference` annotation _without_ providing a service name. In that case, the only difference to the 7.6 model is that it no longer requires a call `Task#usesService(...)`. 
+A variation of the new model that we also support allows applying the `@ServiceReference` annotation _without_ providing a service name. In that case, the only difference to the 7.6 model is that it no longer requires calling `Task#usesService(...)`. 
 
 ### Known issues
 
 At time of writing, using the new model leads to services being instantiated at the beginning of execution, even if not used ([issue 22996](https://github.com/gradle/gradle/issues/22996)). 
+
+## Using the demo project
+
+
+### A task that fails to declare usage of a shared build service
+```
+./gradlew counter0
+```
+
+### A task that uses the pre-8+ model
+
+```
+./gradlew counter1
+```
+
+### A task that uses `@ServiceReference` without providing a service name
+
+```
+./gradlew counter2
+```
+
+
+### A task that uses `@ServiceReference("serviceName")`
+```
+./gradlew counter3
+```
 
 ## Considered Alternatives
 
