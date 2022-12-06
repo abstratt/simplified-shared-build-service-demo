@@ -1,6 +1,6 @@
 # Simplified consumption of Shared Build Services
 
-This work proposes a new kind of property called "Service Reference" to simplify the programming model for consuming shared build services. 
+This work proposes a new kind of property called "Service Reference" to simplify the programming model for consuming [shared build services](https://docs.gradle.org/current/userguide/build_services.html). 
 
 This repository includes a simple project to illustrate the feature.
 
