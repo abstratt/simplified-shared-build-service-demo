@@ -1,0 +1,100 @@
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
+import org.gradle.api.services.ServiceReference
+
+def serviceProvider = gradle.sharedServices.registerIfAbsent("countingService", CountingService) {
+    parameters.initial = 42
+}
+
+abstract class LegacyServiceConsumingTask extends DefaultTask {
+    @Internal
+    abstract Property<CountingService> getCounter()
+
+    @TaskAction
+    def go() {
+        counter.get().increment()
+    }
+}
+
+abstract class TaskUsingUnnamedServiceReference extends DefaultTask {
+    @ServiceReference
+    abstract Property<CountingService> getCounter()
+
+    @TaskAction
+    def go() {
+        counter.get().increment()
+    }
+}
+
+abstract class TaskUsingNamedServiceReference extends DefaultTask {
+    @ServiceReference("countingService")
+    abstract Property<CountingService> getCounter()
+
+    @TaskAction
+    def go() {
+        counter.get().increment()
+    }
+}
+
+// fails to declare service usage (gets warning)
+tasks.register("counter0", LegacyServiceConsumingTask) {
+    counter = serviceProvider
+    doFirst {
+        counter.get().increment()
+    }
+}
+
+// declares usage using Task#usesService
+tasks.register("counter1", LegacyServiceConsumingTask) {
+    counter = serviceProvider
+    usesService(serviceProvider)
+    doFirst {
+        counter.get().increment()
+    }
+}
+
+// declares usage using @ServiceReference (without a service name) and assigns service provider explicitly
+tasks.register("counter2", TaskUsingUnnamedServiceReference) {
+    counter = serviceProvider
+    doFirst {
+        counter.get().increment()
+    }
+}
+
+// declares usage using @ServiceReference (with a service name)
+tasks.register("counter3", TaskUsingNamedServiceReference) {
+    doFirst {
+        counter.get().increment()
+    }
+}
+
+interface CountingParams extends BuildServiceParameters {
+    Property<Integer> getInitial()
+}
+
+abstract class CountingService implements BuildService<CountingParams>, AutoCloseable {
+    int value
+
+    CountingService() {
+        value = parameters.initial.get()
+        println("service: created with value = ${value}")
+    }
+
+    synchronized int getInitialValue() { return parameters.initial.get() }
+
+    synchronized void reset() {
+        value = parameters.initial.get()
+        println("service: value is ${value}")
+    }
+
+    synchronized int increment() {
+        value++
+        println("service: value is ${value}")
+        return value
+    }
+
+    @Override
+    void close() {
+        println("service: closed with value ${value}")
+    }
+}
