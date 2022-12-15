@@ -2,13 +2,17 @@ import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.services.ServiceReference
 
-def serviceProvider = gradle.sharedServices.registerIfAbsent("countingService", CountingService) {
+def serviceProvider = gradle.sharedServices.registerIfAbsent("countingService", SubCountingService1) {
     parameters.initial = 42
+}
+
+gradle.sharedServices.registerIfAbsent("altCountingService", SubCountingService2) {
+    parameters.initial = 100
 }
 
 abstract class LegacyServiceConsumingTask extends DefaultTask {
     @Internal
-    abstract Property<CountingService> getCounter()
+    abstract Property<BaseCountingService> getCounter()
 
     @TaskAction
     def go() {
@@ -16,9 +20,19 @@ abstract class LegacyServiceConsumingTask extends DefaultTask {
     }
 }
 
-abstract class TaskUsingUnnamedServiceReference extends DefaultTask {
+abstract class TaskUsingServiceReferenceByType extends DefaultTask {
     @ServiceReference
-    abstract Property<CountingService> getCounter()
+    abstract Property<SubCountingService1> getCounter()
+
+    @TaskAction
+    def go() {
+        counter.get().increment()
+    }
+}
+
+abstract class TaskUsingAmbiguousServiceReferenceType extends DefaultTask {
+    @ServiceReference
+    abstract Property<BaseCountingService> getCounter()
 
     @TaskAction
     def go() {
@@ -27,8 +41,8 @@ abstract class TaskUsingUnnamedServiceReference extends DefaultTask {
 }
 
 abstract class TaskUsingNamedServiceReference extends DefaultTask {
-    @ServiceReference("countingService")
-    abstract Property<CountingService> getCounter()
+    @ServiceReference("altCountingService")
+    abstract Property<BaseCountingService> getCounter()
 
     @TaskAction
     def go() {
@@ -53,16 +67,31 @@ tasks.register("counter1", LegacyServiceConsumingTask) {
     }
 }
 
-// declares usage using @ServiceReference (without a service name) and assigns service provider explicitly
-tasks.register("counter2", TaskUsingUnnamedServiceReference) {
-    counter = serviceProvider
+// declares usage using @ServiceReference (matching by type)
+tasks.register("counter2", TaskUsingServiceReferenceByType) {
     doFirst {
         counter.get().increment()
     }
 }
 
-// declares usage using @ServiceReference (with a service name)
-tasks.register("counter3", TaskUsingNamedServiceReference) {
+
+// declares usage using @ServiceReference (by type) using an ambiguous type, which fails 
+tasks.register("counter3", TaskUsingAmbiguousServiceReferenceType) {
+    doFirst {
+        counter.get().increment()
+    }
+}
+
+// declares usage using @ServiceReference (by type) desimbiguating via explicit assignment
+tasks.register("counter4", TaskUsingAmbiguousServiceReferenceType) {
+    counter = altServiceProvider
+    doFirst {
+        counter.get().increment()
+    }
+}
+
+// declares usage using @ServiceReference (with a service name, which is free from ambiguity)
+tasks.register("counter5", TaskUsingNamedServiceReference) {
     doFirst {
         counter.get().increment()
     }
@@ -72,10 +101,10 @@ interface CountingParams extends BuildServiceParameters {
     Property<Integer> getInitial()
 }
 
-abstract class CountingService implements BuildService<CountingParams>, AutoCloseable {
+abstract class BaseCountingService implements BuildService<CountingParams>, AutoCloseable {
     int value
 
-    CountingService() {
+    BaseCountingService() {
         value = parameters.initial.get()
         println("service: created with value = ${value}")
     }
@@ -98,3 +127,7 @@ abstract class CountingService implements BuildService<CountingParams>, AutoClos
         println("service: closed with value ${value}")
     }
 }
+
+abstract class SubCountingService1 extends BaseCountingService {}
+
+abstract class SubCountingService2 extends BaseCountingService {}
