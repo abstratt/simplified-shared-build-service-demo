@@ -84,7 +84,7 @@ tasks.register("counter3", TaskUsingAmbiguousServiceReferenceType) {
 
 // declares usage using @ServiceReference (by type) desimbiguating via explicit assignment
 tasks.register("counter4", TaskUsingAmbiguousServiceReferenceType) {
-    counter = altServiceProvider
+    counter = serviceProvider
     doFirst {
         counter.get().increment()
     }
