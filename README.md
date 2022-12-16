@@ -75,12 +75,9 @@ task consumerTask(type: Consumer) {
 ### Comparing both models
 
 1. in the new model, there is no need to store and refer to the provider returned by service registration.
-1. in the new model, the consumer needs to provide the name the service was published under, if more than one service will be registered with the consumed type
+1. in the new model, the consumer task needs to declare a property to hold the reference to the service.
+1. in the new model, the consumer needs to provide the name the service was published under, if more than one service will be registered with the consumed type (or explicitly set the property value or convention, to avoid automatic resolution).
 1. in the new model, properties declared as service references may be declared as `@Optional`. If optional, an unresolved service reference will not lead to a validation error, but code needs to be written so it can handle a missing service (e.g. `if (counter.isPresent()) { ... }`).
-
-### Service references without a name
-
-A variation of the new model that we also support allows applying the `@ServiceReference` annotation _without_ providing a service name. In that case, the only difference to the 7.6 model is that it no longer requires calling `Task#usesService(...)`. 
 
 ### Known issues
 
